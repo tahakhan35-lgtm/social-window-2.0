@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Social Window</title>
+<style>
+  :root{
+    --bg:#FFFFFF; --bg2:#F5F4F1; --bg3:#EFEEEA;
+    --ink:#111110; --ink2:#706F68; --line:#E6E4DD;
+    --danger:#D64545; --success:#1F8A57;
+  }
+  [data-theme="dark"]{
+    --bg:#0B0B0B; --bg2:#161615; --bg3:#1E1E1D;
+    --ink:#F5F4F1; --ink2:#9B9A93; --line:#282724;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Inter,Arial,sans-serif;
+    background:var(--bg3);color:var(--ink);
+  }
+  button,input,textarea{font-family:inherit;}
+  #root{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;display:flex;flex-direction:column;}
+  a{color:inherit;}
+
+  /* ---------- gate ---------- */
+  #gateScreen{
+    position:fixed;inset:0;background:var(--bg);z-index:200;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:32px 24px;max-width:480px;margin:0 auto;overflow-y:auto;
+  }
+  .gate-logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:24px;margin-bottom:6px;}
+  .gate-logo .mark{width:26px;height:26px;border:2px solid var(--ink);border-radius:7px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;padding:2px;gap:2px;}
+  .gate-logo .mark span{background:var(--ink);border-radius:1px;}
+  .gate-sub{font-size:13px;color:var(--ink2);margin:0 0 30px;text-align:center;}
+  .acct-list{width:100%;display:flex;flex-direction:column;gap:10px;margin-bottom:18px;}
+  .acct-card{
+    display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);
+    border-radius:16px;cursor:pointer;background:var(--bg2);
+  }
+  .acct-card:hover{border-color:#c9c7bc;}
+  .avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex-shrink:0;}
+  .acct-card .avatar{width:42px;height:42px;font-size:15px;}
+  .acct-card .who{flex:1;min-width:0;}
+  .acct-card b{font-size:14px;display:block;}
+  .acct-card span{font-size:11.5px;color:var(--ink2);}
+  .acct-card .lock{color:var(--ink2);}
+  .gate-add{
+    width:100%;padding:13px;border-radius:16px;border:1.5px dashed var(--line);background:none;
+    color:var(--ink);font-size:13.5px;font-weight:600;cursor:pointer;
+  }
+  .gate-limit{font-size:12px;color:var(--ink2);text-align:center;margin-top:10px;}
+  .gate-form{width:100%;display:none;flex-direction:column;gap:10px;margin-top:6px;}
+  .gate-form.show{display:flex;}
+  .field-label{font-size:12px;font-weight:600;color:var(--ink2);margin:6px 0 -2px;}
+  input[type="text"],input[type="password"],input[type="tel"],textarea{
+    width:100%;padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:var(--bg2);
+    color:var(--ink);font-size:14px;outline:none;
+  }
+  input:focus,textarea:focus{border-color:var(--ink2);}
+  .btn{
+    padding:12px 0;border-radius:100px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);
+    font-size:14px;font-weight:600;cursor:pointer;width:100%;
+  }
+  .btn.ghost{background:none;color:var(--ink);}
+  .btn.danger{background:var(--danger);border-color:var(--danger);color:#fff;}
+  .btn-row{display:flex;gap:10px;}
+  .btn-row .btn{flex:1;}
+  .hint{font-size:11px;color:var(--ink2);line-height:1.5;}
+  .pin-box{display:none;width:100%;gap:8px;flex-direction:column;margin-top:8px;}
+  .pin-box.show{display:flex;}
+
+  /* ---------- app shell ---------- */
+  #appShell{display:none;flex-direction:column;flex:1;min-height:100vh;}
+  #appShell.show{display:flex;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;position:sticky;top:0;background:var(--bg);z-index:20;border-bottom:1px solid transparent;}
+  .topbar .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:18px;}
+  .topbar .brand .mark{width:20px;height:20px;border:2px solid var(--ink);border-radius:6px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;padding:1.5px;gap:1.5px;}
+  .topbar .brand .mark span{background:var(--ink);border-radius:1px;}
+  .topbar h1{font-size:17px;margin:0;font-weight:700;}
+  .topbar .actions{display:flex;gap:14px;align-items:center;}
+  .icon-btn{background:none;border:none;padding:4px;cursor:pointer;color:var(--ink);display:flex;position:relative;}
+  .icon-btn svg{width:22px;height:22px;}
+
+  .screens{flex:1;position:relative;}
+  .screen{display:none;flex-direction:column;flex:1;padding-bottom:78px;}
+  .screen.active{display:flex;}
+
+  /* ---------- stories ---------- */
+  .stories-rail{display:flex;gap:14px;padding:6px 18px 14px;overflow-x:auto;}
+  .story-item{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;cursor:pointer;width:58px;}
+  .story-ring{width:58px;height:58px;border-radius:50%;padding:2.5px;background:conic-gradient(from 180deg, var(--ink), var(--ink2) 60%, var(--ink));position:relative;}
+  .story-ring.empty{background:var(--line);}
+  .story-ring .avatar{width:100%;height:100%;font-size:16px;border:2.5px solid var(--bg);}
+  .story-item .plus{position:absolute;bottom:-1px;right:-1px;width:18px;height:18px;background:var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg);}
+  .story-item .plus svg{width:10px;height:10px;stroke:var(--bg);}
+  .story-item span{font-size:10.5px;color:var(--ink2);max-width:58px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+  /* ---------- composer ---------- */
+  .composer{margin:0 18px 14px;padding:10px 14px;background:var(--bg2);border-radius:100px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border:1px solid var(--line);}
+  .composer .left{display:flex;align-items:center;gap:10px;color:var(--ink2);font-size:13.5px;}
+  .composer .left .avatar{width:26px;height:26px;font-size:11px;}
+  .composer .icons{display:flex;gap:12px;color:var(--ink2);}
+  .composer .icons svg{width:18px;height:18px;}
+
+  /* ---------- feed / cards ---------- */
+  .feed{padding:0 18px 20px;display:flex;flex-direction:column;gap:16px;}
+  .card{background:var(--bg);border:1px solid var(--line);border-radius:18px;overflow:hidden;}
+  .card-head{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;}
+  .card-head .who{display:flex;align-items:center;gap:9px;}
+  .card-head .avatar{width:32px;height:32px;font-size:12.5px;}
+  .card-head .name{font-size:13px;font-weight:600;line-height:1.2;}
+  .card-head .meta{font-size:11px;color:var(--ink2);}
+  .card-head .more{background:none;border:none;color:var(--ink2);cursor:pointer;font-size:18px;letter-spacing:1px;padding:2px 6px;}
+  .card-media{width:100%;background:var(--bg3);display:block;max-height:420px;overflow:hidden;}
+  .card-media img,.card-media video{width:100%;display:block;max-height:420px;object-fit:cover;background:#000;}
+  .card-bigtext{padding:24px 20px 28px;text-align:center;font-weight:600;font-size:19px;line-height:1.35;}
+  .card-caption{padding:9px 13px 0;font-size:13px;line-height:1.45;}
+  .card-caption b{margin-right:5px;}
+  .card-actions{display:flex;align-items:center;justify-content:space-between;padding:9px 13px 2px;}
+  .card-actions .left{display:flex;gap:14px;}
+  .act{display:flex;align-items:center;gap:5px;background:none;border:none;color:var(--ink);cursor:pointer;padding:2px;}
+  .act svg{width:21px;height:21px;}
+  .act span{font-size:12px;color:var(--ink2);}
+  .act.liked svg{fill:var(--danger);stroke:var(--danger);}
+  .act.saved svg{fill:var(--ink);}
+  .comments-toggle{padding:6px 13px 2px;font-size:12px;color:var(--ink2);background:none;border:none;cursor:pointer;text-align:left;}
+  .comments-block{display:none;padding:0 13px 12px;}
+  .comments-block.show{display:block;}
+  .comment-row{display:flex;gap:8px;padding:6px 0;font-size:12.5px;align-items:flex-start;}
+  .comment-row .avatar{width:22px;height:22px;font-size:9.5px;flex-shrink:0;}
+  .comment-row b{margin-right:5px;}
+  .comment-form{display:flex;gap:8px;margin-top:6px;align-items:center;}
+  .comment-form input{flex:1;padding:8px 12px;font-size:12.5px;}
+  .comment-form button{background:none;border:none;color:var(--ink);font-size:12.5px;font-weight:700;cursor:pointer;padding:4px 6px;}
+  .empty-state{padding:60px 24px;text-align:center;color:var(--ink2);}
+  .empty-state svg{width:38px;height:38px;margin-bottom:10px;opacity:.5;}
+  .empty-state p{font-size:13px;margin:0 0 14px;line-height:1.5;}
+
+  /* ---------- explore ---------- */
+  .explore-search{margin:0 18px 12px;padding:10px 14px;background:var(--bg2);border-radius:100px;display:flex;align-items:center;gap:8px;border:1px solid var(--line);}
+  .explore-search svg{width:16px;height:16px;color:var(--ink2);flex-shrink:0;}
+  .explore-search input{border:none;background:none;padding:0;font-size:13px;}
+  .explore-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2.5px;padding:0 18px 20px;}
+  .explore-cell{aspect-ratio:1/1;background:var(--bg3);position:relative;overflow:hidden;border-radius:3px;cursor:pointer;}
+  .explore-cell img,.explore-cell video{width:100%;height:100%;object-fit:cover;}
+  .explore-cell .txtcell{width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:8px;font-size:10.5px;font-weight:600;text-align:center;background:var(--bg2);}
+  .explore-cell.vid::after{content:"";position:absolute;top:6px;right:6px;width:11px;height:11px;background:rgba(255,255,255,.9);clip-path:polygon(20% 0%,100% 50%,20% 100%);}
+
+  /* ---------- reels/videos ---------- */
+  .reel-screen{position:relative;width:100%;flex:1;background:#0a0a0a;overflow:hidden;}
+  .reel-slide{position:absolute;inset:0;opacity:0;transition:opacity .2s ease;display:flex;align-items:center;justify-content:center;}
+  .reel-slide.active{opacity:1;}
+  .reel-slide video{width:100%;height:100%;object-fit:cover;background:#000;}
+  .reel-shade{position:absolute;inset:0;background:linear-gradient(to top, rgba(0,0,0,.75) 0%, rgba(0,0,0,0) 30%);pointer-events:none;}
+  .reel-bottom{position:absolute;left:16px;right:78px;bottom:18px;color:#fff;z-index:5;}
+  .reel-bottom .who{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .reel-bottom .who .avatar{width:28px;height:28px;font-size:11px;border:1.5px solid #fff;}
+  .reel-bottom .who b{font-size:13px;font-weight:600;}
+  .reel-bottom p{font-size:12.5px;line-height:1.4;margin:0;opacity:.95;}
+  .reel-rail{position:absolute;right:12px;bottom:22px;display:flex;flex-direction:column;align-items:center;gap:16px;z-index:5;color:#fff;}
+  .reel-rail .ract{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:#fff;cursor:pointer;}
+  .reel-rail .ract svg{width:24px;height:24px;}
+  .reel-rail .ract span{font-size:10.5px;font-weight:600;}
+  .reel-rail .ract.liked svg{fill:var(--danger);stroke:var(--danger);}
+  .reel-nav{position:absolute;left:0;right:0;z-index:6;display:flex;justify-content:space-between;padding:0 10px;top:50%;transform:translateY(-50%);pointer-events:none;}
+  .reel-nav button{pointer-events:auto;background:rgba(0,0,0,.35);border:none;color:#fff;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .reel-nav svg{width:18px;height:18px;}
+  .reel-counter{position:absolute;top:14px;right:16px;color:#fff;font-size:11px;background:rgba(0,0,0,.4);padding:3px 9px;border-radius:100px;z-index:6;}
+
+  /* ---------- messages ---------- */
+  .msg-search{margin:0 18px 12px;padding:10px 14px;background:var(--bg2);border-radius:100px;display:flex;align-items:center;gap:8px;border:1px solid var(--line);color:var(--ink2);}
+  .msg-search svg{width:16px;height:16px;}
+  .inbox-list{padding:0 10px;}
+  .inbox-row{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:14px;cursor:pointer;}
+  .inbox-row:hover{background:var(--bg2);}
+  .inbox-row .avatar{width:46px;height:46px;font-size:16px;flex-shrink:0;}
+  .inbox-row .mid{flex:1;min-width:0;}
+  .inbox-row .top{display:flex;justify-content:space-between;align-items:baseline;}
+  .inbox-row b{font-size:13.5px;}
+  .inbox-row .time{font-size:11px;color:var(--ink2);}
+  .inbox-row p{margin:2px 0 0;font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .chat-header{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);}
+  .chat-header .avatar{width:32px;height:32px;font-size:12px;}
+  .chat-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;}
+  .bubble{max-width:75%;padding:9px 13px;border-radius:16px;font-size:13px;line-height:1.4;word-wrap:break-word;}
+  .bubble.them{align-self:flex-start;background:var(--bg2);border-bottom-left-radius:5px;}
+  .bubble.me{align-self:flex-end;background:var(--ink);color:var(--bg);border-bottom-right-radius:5px;}
+  .chat-input{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--line);}
+  .chat-input input{flex:1;border-radius:100px;padding:10px 15px;font-size:13px;}
+  .chat-input button{background:var(--ink);color:var(--bg);border:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+  .chat-input button svg{width:16px;height:16px;}
+
+  /* ---------- profile ---------- */
+  .profile-cover{height:96px;background:linear-gradient(135deg,var(--bg3),var(--bg2));flex-shrink:0;}
+  .profile-head{padding:0 18px;margin-top:-32px;position:relative;}
+  .profile-head .avatar{width:76px;height:76px;font-size:26px;border:3.5px solid var(--bg);}
+  .profile-namebox{margin-top:10px;display:flex;align-items:center;justify-content:space-between;}
+  .profile-namebox h2{margin:0;font-size:17px;font-weight:700;}
+  .profile-namebox .uname{font-size:12px;color:var(--ink2);}
+  .profile-stats{display:flex;gap:22px;margin:12px 0;}
+  .profile-stats b{display:block;font-size:15px;}
+  .profile-stats span{font-size:11px;color:var(--ink2);}
+  .profile-btn-row{display:flex;gap:8px;margin-bottom:6px;}
+  .profile-btn-row .btn{padding:9px 0;font-size:12.5px;}
+  .profile-tabs{display:flex;margin:14px 18px 0;border-bottom:1px solid var(--line);}
+  .ptab{flex:1;text-align:center;padding:10px 0;font-size:12px;font-weight:600;color:var(--ink2);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;}
+  .ptab.active{color:var(--ink);border-bottom-color:var(--ink);}
+  .profile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2.5px;padding:10px 18px 20px;}
+
+  /* ---------- nav ---------- */
+  .bottom-nav{position:sticky;bottom:0;display:flex;align-items:center;justify-content:space-around;padding:9px 8px calc(9px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--bg);z-index:30;}
+  .nav-btn{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--ink2);cursor:pointer;padding:4px 8px;}
+  .nav-btn svg{width:22px;height:22px;}
+  .nav-btn.active{color:var(--ink);}
+  .nav-create{width:44px;height:44px;border-radius:15px;background:var(--ink);display:flex;align-items:center;justify-content:center;margin-top:-14px;border:none;cursor:pointer;box-shadow:0 6px 14px -6px rgba(0,0,0,.35);}
+  .nav-create svg{width:20px;height:20px;stroke:var(--bg);}
+  .nav-avatar-btn .avatar{width:22px;height:22px;font-size:9px;}
+  .nav-avatar-btn.active .avatar{box-shadow:0 0 0 2px var(--ink);}
+
+  /* ---------- sheets / overlays ---------- */
+  .backdrop{position:fixed;inset:0;background:rgba(10,10,10,.42);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:60;max-width:480px;margin:0 auto;}
+  .backdrop.open{opacity:1;pointer-events:auto;}
+  .sheet{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;background:var(--bg);border-radius:22px 22px 0 0;padding:10px 18px calc(20px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .26s cubic-bezier(.32,.72,0,1);z-index:70;border-top:1px solid var(--line);max-height:85vh;overflow-y:auto;}
+  .sheet.open{transform:translateY(0);}
+  .sheet-handle{width:36px;height:4px;background:var(--line);border-radius:10px;margin:6px auto 14px;}
+  .sheet-title{font-weight:700;font-size:16px;margin:0 0 4px;}
+  .sheet-sub{font-size:12px;color:var(--ink2);margin:0 0 14px;}
+  .sheet-tabs{display:flex;gap:8px;margin-bottom:14px;}
+  .sheet-tab{flex:1;padding:9px 0;border-radius:100px;border:1px solid var(--line);background:none;color:var(--ink);font-size:12.5px;font-weight:600;cursor:pointer;}
+  .sheet-tab.active{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+  .upload-drop{border:1.5px dashed var(--line);border-radius:14px;padding:20px;text-align:center;cursor:pointer;margin-bottom:12px;}
+  .upload-drop svg{width:26px;height:26px;color:var(--ink2);margin-bottom:6px;}
+  .upload-drop p{font-size:12.5px;color:var(--ink2);margin:0;}
+  .upload-preview{position:relative;margin-bottom:12px;border-radius:14px;overflow:hidden;background:var(--bg3);}
+  .upload-preview img,.upload-preview video{width:100%;max-height:220px;object-fit:cover;display:block;}
+  .upload-preview .rm{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;border:none;width:26px;height:26px;border-radius:50%;cursor:pointer;}
+  .sheet-opt{display:flex;align-items:center;gap:13px;padding:12px 2px;cursor:pointer;border-bottom:1px solid var(--line);}
+  .sheet-opt:last-child{border-bottom:none;}
+  .sheet-icon{width:40px;height:40px;border-radius:12px;background:var(--bg2);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .sheet-icon svg{width:19px;height:19px;}
+  .sheet-opt b{font-size:13.5px;display:block;}
+  .sheet-opt span{font-size:11.5px;color:var(--ink2);}
+  .settings-row{display:flex;align-items:center;justify-content:space-between;padding:12px 2px;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .settings-row:last-child{border-bottom:none;}
+  .switch{width:38px;height:22px;border-radius:100px;background:var(--line);position:relative;cursor:pointer;flex-shrink:0;}
+  .switch.on{background:var(--ink);}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s ease;}
+  .switch.on::after{left:18px;}
+
+  /* ---------- story viewer ---------- */
+  .story-viewer{position:fixed;inset:0;max-width:480px;margin:0 auto;background:#0a0a0a;z-index:90;opacity:0;pointer-events:none;transition:opacity .18s ease;}
+  .story-viewer.open{opacity:1;pointer-events:auto;}
+  .story-viewer .media-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+  .story-viewer img,.story-viewer video{width:100%;height:100%;object-fit:cover;}
+  .sv-shade{position:absolute;inset:0;background:linear-gradient(to bottom, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 72%, rgba(0,0,0,.5) 100%);pointer-events:none;}
+  .sv-progress{position:absolute;top:12px;left:12px;right:12px;display:flex;gap:4px;z-index:3;}
+  .sv-progress i{flex:1;height:2.5px;background:rgba(255,255,255,.35);border-radius:2px;overflow:hidden;}
+  .sv-progress i b{display:block;height:100%;width:0%;background:#fff;}
+  .sv-head{position:absolute;top:22px;left:14px;right:14px;display:flex;align-items:center;gap:8px;z-index:3;color:#fff;}
+  .sv-head .avatar{width:26px;height:26px;font-size:10px;}
+  .sv-head b{font-size:12.5px;}
+  .sv-close{margin-left:auto;background:none;border:none;color:#fff;cursor:pointer;padding:4px;}
+  .sv-close svg{width:18px;height:18px;}
+  .sv-tap{position:absolute;top:0;bottom:0;width:50%;z-index:2;}
+  .sv-tap.l{left:0;} .sv-tap.r{right:0;}
+
+  /* ---------- misc ---------- */
+  .toast{position:fixed;left:50%;bottom:100px;transform:translate(-50%,10px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:100px;font-size:12.5px;opacity:0;transition:all .25s ease;z-index:300;max-width:80%;text-align:center;}
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+  .pk-error{color:var(--danger);font-size:11.5px;display:none;}
+  .pk-error.show{display:block;}
+</style>
+</head>
+<body data-theme="light">
+<div id="root">
+
+  <!-- ============ GATE ============ -->
+  <div id="gateScreen">
+    <div class="gate-logo"><span class="mark"><span></span><span></span><span></span><span></span></span>Social Window</div>
+    <p class="gate-sub">Local guest account · up to 3 profiles on this device</p>
+
+    <div class="acct-list" id="acctList"></div>
+    <button class="gate-add" id="gateAddBtn" onclick="showCreateForm()">+ Create guest account</button>
+    <p class="gate-limit" id="gateLimit"></p>
+
+    <div class="gate-form" id="createForm">
+      <p class="field-label">Display name</p>
+      <input type="text" id="newName" maxlength="24" placeholder="e.g. Ayesha">
+      <p class="field-label">4-digit PIN (optional, local lock)</p>
+      <input type="tel" id="newPin" maxlength="4" placeholder="Leave blank for none">
+      <p class="hint">This PIN just locks switching into this profile on this device — it isn't real encryption or account security.</p>
+      <p class="pk-error" id="createErr"></p>
+      <div class="btn-row" style="margin-top:6px;">
+        <button class="btn ghost" onclick="hideCreateForm()">Cancel</button>
+        <button class="btn" onclick="createAccount()">Create</button>
+      </div>
+    </div>
+
+    <div class="gate-form" id="pinForm">
+      <p class="field-label" id="pinFormLabel">Enter PIN</p>
+      <input type="tel" id="pinInput" maxlength="4" placeholder="••••">
+      <p class="pk-error" id="pinErr">Incorrect PIN</p>
+      <div class="btn-row" style="margin-top:6px;">
+        <button class="btn ghost" onclick="cancelPin()">Cancel</button>
+        <button class="btn" onclick="submitPin()">Unlock</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ APP SHELL ============ -->
+  <div id="appShell">
+    <div class="screens">
+
+      <!-- HOME -->
+      <section class="screen active" id="screen-home">
+        <div class="topbar">
+          <div class="brand"><span class="mark"><span></span><span></span><span></span><span></span></span>Social Window</div>
+          <div class="actions">
+            <button class="icon-btn" onclick="goScreen('messages')" aria-label="Messages">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 9 9 0 01-3.6-.7L3 20l1-4.8A8.3 8.3 0 013 11.5 8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="stories-rail" id="storiesRail"></div>
+        <div class="composer" id="composerBar" onclick="openCreate('post')">
+          <div class="left"><span class="avatar" id="composerAvatar"></span><span id="composerText">What's on your mind?</span></div>
+          <div class="icons">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="10" r="1.5" fill="currentColor" stroke="none"/><path d="M21 15l-5-4-5 4-3-2-5 4"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="6" width="14" height="12" rx="2.5"/><path d="M17 10l4.5-2.5v9L17 14"/></svg>
+          </div>
+        </div>
+        <div class="feed" id="feed"></div>
+      </section>
+
+      <!-- EXPLORE -->
+      <section class="screen" id="screen-explore">
+        <div class="topbar"><h1>Explore</h1></div>
+        <div class="explore-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="text" id="exploreSearch" placeholder="Search posts, people" oninput="renderExplore()">
+        </div>
+        <div class="explore-grid" id="exploreGrid"></div>
+      </section>
+
+      <!-- VIDEOS -->
+      <section class="screen" id="screen-videos">
+        <div class="reel-screen" id="reelScreen">
+          <div class="reel-counter" id="reelCounter"></div>
+        </div>
+      </section>
+
+      <!-- MESSAGES -->
+      <section class="screen" id="screen-messages">
+        <div id="inboxView">
+          <div class="topbar"><h1>Messages</h1></div>
+          <div class="inbox-list" id="inboxList"></div>
+        </div>
+        <div id="chatView" style="display:none;flex-direction:column;flex:1;">
+          <div class="chat-header">
+            <button class="icon-btn" onclick="closeChat()" style="padding:0 4px 0 0;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <span class="avatar" id="chatAvatar"></span>
+            <b id="chatName"></b>
+          </div>
+          <div class="chat-body" id="chatBody"></div>
+          <div class="chat-input">
+            <input type="text" id="chatInput" placeholder="Message…" maxlength="500" onkeydown="if(event.key==='Enter')sendMessage()">
+            <button onclick="sendMessage()" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- PROFILE -->
+      <section class="screen" id="screen-profile">
+        <div class="topbar"><h1>Profile</h1>
+          <div class="actions"><button class="icon-btn" onclick="openSettings()" aria-label="Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          </button></div>
+        </div>
+        <div class="profile-cover"></div>
+        <div class="profile-head">
+          <span class="avatar" id="profileAvatar"></span>
+          <div class="profile-namebox">
+            <div><h2 id="profileName"></h2><div class="uname" id="profileUname"></div></div>
+          </div>
+          <div class="profile-stats">
+            <div><b id="statPosts">0</b><span>Posts</span></div>
+            <div><b id="statVideos">0</b><span>Videos</span></div>
+            <div><b id="statStories">0</b><span>Stories</span></div>
+          </div>
+        </div>
+        <div class="profile-tabs">
+          <button class="ptab active" onclick="setPTab(this,'posts')">Posts</button>
+          <button class="ptab" onclick="setPTab(this,'videos')">Videos</button>
+        </div>
+        <div class="profile-grid" id="profileGrid"></div>
+      </section>
+
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-s="home" onclick="goScreen('home',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5L12 4l8 7.5"/><path d="M6 10v9a1 1 0 001 1h4v-6h2v6h4a1 1 0 001-1v-9"/></svg>
+      </button>
+      <button class="nav-btn" data-s="explore" onclick="goScreen('explore',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </button>
+      <button class="nav-create" onclick="openCreate('post')" aria-label="Create">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button class="nav-btn" data-s="videos" onclick="goScreen('videos',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="4"/><polygon points="10,8.5 16,12 10,15.5" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <button class="nav-btn nav-avatar-btn" data-s="profile" onclick="goScreen('profile',this)">
+        <span class="avatar" id="navAvatar"></span>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- ============ CREATE SHEET ============ -->
+  <div class="backdrop" id="createBackdrop" onclick="closeCreate()"></div>
+  <div class="sheet" id="createSheet">
+    <div class="sheet-handle"></div>
+    <p class="sheet-title">Create</p>
+    <div class="sheet-tabs">
+      <button class="sheet-tab active" id="tabPost" onclick="setCreateTab('post')">Post</button>
+      <button class="sheet-tab" id="tabStory" onclick="setCreateTab('story')">Story</button>
+    </div>
+    <div id="uploadPreviewWrap"></div>
+    <div class="upload-drop" id="uploadDrop" onclick="document.getElementById('fileInput').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 20h16"/></svg>
+      <p>Tap to add a photo or video<br><span style="font-size:11px">Images up to 6MB · Videos up to 25MB</span></p>
+    </div>
+    <input type="file" id="fileInput" accept="image/*,video/*" style="display:none" onchange="handleFileSelect(event)">
+    <div id="captionWrap">
+      <textarea id="captionInput" rows="2" maxlength="280" placeholder="Write a caption… (optional for photo/video, required for text-only post)"></textarea>
+    </div>
+    <p class="pk-error" id="createPostErr"></p>
+    <button class="btn" style="margin-top:12px;" onclick="submitCreate()">Share</button>
+  </div>
+
+  <!-- ============ SETTINGS SHEET ============ -->
+  <div class="backdrop" id="settingsBackdrop" onclick="closeSettings()"></div>
+  <div class="sheet" id="settingsSheet">
+    <div class="sheet-handle"></div>
+    <p class="sheet-title">Settings</p>
+    <div class="settings-row"><span>Dark mode</span><div class="switch" id="darkSwitch" onclick="toggleDark()"></div></div>
+    <div class="settings-row" style="display:block;">
+      <p class="field-label" style="margin:2px 0 6px;">Display name</p>
+      <input type="text" id="editName" maxlength="24">
+      <button class="btn ghost" style="margin-top:8px;padding:9px 0;font-size:12.5px;" onclick="saveName()">Save name</button>
+    </div>
+    <div class="settings-row" style="display:block;">
+      <p class="field-label" style="margin:2px 0 6px;">Local PIN lock</p>
+      <input type="tel" id="editPin" maxlength="4" placeholder="4-digit PIN or leave blank">
+      <button class="btn ghost" style="margin-top:8px;padding:9px 0;font-size:12.5px;" onclick="savePin()">Save PIN</button>
+    </div>
+    <div class="sheet-opt" onclick="switchAccount()">
+      <div class="sheet-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg></div>
+      <div><b>Switch account</b><span id="settingsAcctCount"></span></div>
+    </div>
+    <div class="sheet-opt" onclick="deleteAccount()">
+      <div class="sheet-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg></div>
+      <div><b style="color:var(--danger)">Delete this guest account</b><span>Removes all its posts, stories &amp; messages from this device</span></div>
+    </div>
+    <p class="hint" style="margin-top:10px;">All data lives only in this browser (IndexedDB) — nothing is sent to a server, so it won't sync to other devices.</p>
+  </div>
+
+  <!-- ============ STORY VIEWER ============ -->
+  <div class="story-viewer" id="storyViewer">
+    <div class="media-wrap" id="svMediaWrap"></div>
+    <div class="sv-shade"></div>
+    <div class="sv-progress" id="svProgress"></div>
+    <div class="sv-head">
+      <span class="avatar" id="svAvatar"></span>
+      <b id="svName"></b>
+      <button class="sv-close" onclick="closeStory()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="sv-tap l" onclick="svPrev()"></div>
+    <div class="sv-tap r" onclick="svNext()"></div>
+  </div>
+
+</div>
+
+<script>
+/* ================= DB LAYER ================= */
+var DB_NAME='socialWindowDB', DB_VERSION=1, db;
+function openDB(){
+  return new Promise(function(resolve,reject){
+    var req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = function(e){
+      var d = e.target.result;
+      ['accounts','posts','stories','messages','media'].forEach(function(s){
+        if(!d.objectStoreNames.contains(s)) d.createObjectStore(s,{keyPath:'id'});
+      });
+    };
+    req.onsuccess = function(){ db=req.result; resolve(db); };
+    req.onerror = function(){ reject(req.error); };
+  });
+}
+function tx(store,mode){ return db.transaction(store,mode||'readonly').objectStore(store); }
+function idbGetAll(store){ return new Promise(function(res,rej){ var r=tx(store).getAll(); r.onsuccess=function(){res(r.result);}; r.onerror=function(){rej(r.error);}; }); }
+function idbGet(store,id){ return new Promise(function(res,rej){ var r=tx(store).get(id); r.onsuccess=function(){res(r.result);}; r.onerror=function(){rej(r.error);}; }); }
+function idbPut(store,val){ return new Promise(function(res,rej){ var t=db.transaction(store,'readwrite'); t.objectStore(store).put(val); t.oncomplete=function(){res(val);}; t.onerror=function(){rej(t.error);}; }); }
+function idbDelete(store,id){ return new Promise(function(res,rej){ var t=db.transaction(store,'readwrite'); t.objectStore(store).delete(id); t.oncomplete=function(){res();}; t.onerror=function(){rej(t.error);}; }); }
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,9); }
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function timeAgo(ts){
+  var s = Math.floor((Date.now()-ts)/1000);
+  if(s<60) return 'now';
+  if(s<3600) return Math.floor(s/60)+'m';
+  if(s<86400) return Math.floor(s/3600)+'h';
+  return Math.floor(s/86400)+'d';
+}
+function toast(msg){
+  var t=document.createElement('div');
+  t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(function(){t.classList.add('show');});
+  setTimeout(function(){t.classList.remove('show'); setTimeout(function(){t.remove();},300);},2400);
+}
+
+/* ================= AVATAR ================= */
+var AVATAR_COLORS=['#5A4FCF','#2F6F4F','#B23A48','#1F6F78','#8B5E3C','#7A5230','#3C4E6E','#946B45'];
+function hashStr(s){ var h=0; for(var i=0;i<s.length;i++){ h=(h*31 + s.charCodeAt(i))|0; } return Math.abs(h); }
+function avatarHtml(name,id,cls){
+  var color = AVATAR_COLORS[hashStr(id||name||'x') % AVATAR_COLORS.length];
+  var initial = (name||'?').trim().charAt(0).toUpperCase() || '?';
+  return '<span class="avatar'+(cls?(' '+cls):'')+'" style="background:'+color+'">'+initial+'</span>';
+}
+
+/* ================= STATE ================= */
+var CURRENT_ID = localStorage.getItem('sw_current') || null;
+var accountsCache = [];
+var mediaCache = {};
+var pendingUpload = null;
+var createTab = 'post';
+var pinTargetAccountId = null;
+
+/* ================= INIT ================= */
+initApp();
+async function initApp(){
+  await openDB();
+  await cleanupOldStories();
+  accountsCache = await idbGetAll('accounts');
+  renderGate();
+  var savedTheme = localStorage.getItem('sw_theme');
+  if(savedTheme==='dark'){ document.body.setAttribute('data-theme','dark'); }
+  if(CURRENT_ID && accountsCache.find(function(a){return a.id===CURRENT_ID;})){
+    enterApp(CURRENT_ID);
+  }
+}
+
+async function cleanupOldStories(){
+  var stories = await idbGetAll('stories');
+  var cutoff = Date.now() - 24*3600*1000;
+  for(var i=0;i<stories.length;i++){
+    if(stories[i].createdAt < cutoff){
+      if(stories[i].mediaId) await idbDelete('media', stories[i].mediaId);
+      await idbDelete('stories', stories[i].id);
+    }
+  }
+}
+
+/* ================= GATE ================= */
+function renderGate(){
+  var list = document.getElementById('acctList');
+  if(accountsCache.length===0){
+    list.innerHTML = '';
+  } else {
+    list.innerHTML = accountsCache.map(function(a){
+      return '<div class="acct-card" onclick="pickAccount(\''+a.id+'\')">'+
+        avatarHtml(a.name,a.id)+
+        '<div class="who"><b>'+escapeHtml(a.name)+'</b><span>'+escapeHtml(a.username)+'</span></div>'+
+        (a.pin ? '<span class="lock"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></span>' : '')+
+      '</div>';
+    }).join('');
+  }
+  var addBtn = document.getElementById('gateAddBtn');
+  var limitP = document.getElementById('gateLimit');
+  if(accountsCache.length>=3){
+    addBtn.style.display='none';
+    limitP.textContent = 'Guest limit reached (3/3) — delete a profile in Settings to add a new one.';
+  } else {
+    addBtn.style.display='block';
+    limitP.textContent = accountsCache.length+'/3 guest profiles used on this device.';
+  }
+}
+function showCreateForm(){ document.getElementById('createForm').classList.add('show'); }
+function hideCreateForm(){ document.getElementById('createForm').classList.remove('show'); document.getElementById('createErr').classList.remove('show'); }
+async function createAccount(){
+  var name = document.getElementById('newName').value.trim();
+  var pin = document.getElementById('newPin').value.trim();
+  var err = document.getElementById('createErr');
+  if(!name){ err.textContent='Enter a display name.'; err.classList.add('show'); return; }
+  if(pin && !/^\d{4}$/.test(pin)){ err.textContent='PIN must be exactly 4 digits.'; err.classList.add('show'); return; }
+  if(accountsCache.length>=3){ err.textContent='Guest limit reached (3/3).'; err.classList.add('show'); return; }
+  err.classList.remove('show');
+  var id = uid();
+  var username = '@'+name.toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,14) + Math.floor(Math.random()*90+10);
+  var account = {id:id, name:name.slice(0,24), username:username, pin: pin||null, createdAt:Date.now()};
+  await idbPut('accounts', account);
+  accountsCache.push(account);
+  document.getElementById('newName').value=''; document.getElementById('newPin').value='';
+  hideCreateForm();
+  renderGate();
+  enterApp(id);
+}
+function pickAccount(id){
+  var a = accountsCache.find(function(x){return x.id===id;});
+  if(!a) return;
+  if(a.pin){
+    pinTargetAccountId = id;
+    document.getElementById('pinFormLabel').textContent = 'Enter PIN for '+a.name;
+    document.getElementById('pinInput').value='';
+    document.getElementById('pinErr').classList.remove('show');
+    document.getElementById('pinForm').classList.add('show');
+  } else {
+    enterApp(id);
+  }
+}
+function cancelPin(){ document.getElementById('pinForm').classList.remove('show'); pinTargetAccountId=null; }
+function submitPin(){
+  var a = accountsCache.find(function(x){return x.id===pinTargetAccountId;});
+  var val = document.getElementById('pinInput').value.trim();
+  if(a && val===a.pin){
+    document.getElementById('pinForm').classList.remove('show');
+    enterApp(a.id);
+  } else {
+    document.getElementById('pinErr').classList.add('show');
+  }
+}
+
+function enterApp(id){
+  CURRENT_ID = id;
+  localStorage.setItem('sw_current', id);
+  document.getElementById('gateScreen').style.display='none';
+  document.getElementById('appShell').classList.add('show');
+  refreshAll();
+}
+function switchAccount(){
+  closeSettings();
+  document.getElementById('appShell').classList.remove('show');
+  document.getElementById('gateScreen').style.display='flex';
+  renderGate();
+}
+
+function currentAccount(){ return accountsCache.find(function(a){return a.id===CURRENT_ID;}); }
+
+/* ================= NAV ================= */
+function goScreen(name, btn){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById('screen-'+name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
+  var target = btn || document.querySelector('.nav-btn[data-s="'+name+'"]');
+  if(target) target.classList.add('active');
+  if(name==='explore') renderExplore();
+  if(name==='videos') renderReels();
+  if(name==='messages') renderInbox();
+  if(name==='profile') renderProfile();
+}
+
+/* ================= MEDIA CACHE ================= */
+async function getMediaUrl(mediaId){
+  if(!mediaId) return null;
+  if(mediaCache[mediaId]) return mediaCache[mediaId];
+  var rec = await idbGet('media', mediaId);
+  if(!rec) return null;
+  var url = URL.createObjectURL(rec.blob);
+  mediaCache[mediaId] = url;
+  return url;
+}
+
+/* ================= REFRESH ================= */
+async function refreshAll(){
+  var a = currentAccount();
+  if(!a) return;
+  document.getElementById('composerAvatar').outerHTML = avatarHtml(a.name,a.id,'').replace('class="avatar"','id="composerAvatar" class="avatar"');
+  document.getElementById('navAvatar').outerHTML = avatarHtml(a.name,a.id,'').replace('class="avatar"','id="navAvatar" class="avatar"');
+  await renderStoriesRail();
+  await renderFeed();
+  renderProfile();
+}
+
+/* ================= STORIES ================= */
+async function renderStoriesRail(){
+  var stories = await idbGetAll('stories');
+  var cutoff = Date.now()-24*3600*1000;
+  stories = stories.filter(function(s){return s.createdAt>=cutoff;});
+  var byAccount = {};
+  stories.forEach(function(s){ (byAccount[s.accountId]=byAccount[s.accountId]||[]).push(s); });
+  Object.keys(byAccount).forEach(function(k){ byAccount[k].sort(function(a,b){return a.createdAt-b.createdAt;}); });
+
+  var me = currentAccount();
+  var mine = byAccount[me.id];
+  var html = '';
+  html += '<div class="story-item">'+
+    '<div class="story-ring'+(mine?'':' empty')+'" onclick="'+(mine?('viewStory(\''+me.id+'\')'):'openCreate(\'story\')')+'">'+
+    avatarHtml(me.name,me.id)+
+    '<span class="plus" onclick="event.stopPropagation();openCreate(\'story\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>'+
+    '</div><span>Your story</span></div>';
+
+  accountsCache.forEach(function(acc){
+    if(acc.id===me.id) return;
+    if(!byAccount[acc.id]) return;
+    html += '<div class="story-item" onclick="viewStory(\''+acc.id+'\')">'+
+      '<div class="story-ring">'+avatarHtml(acc.name,acc.id)+'</div>'+
+      '<span>'+escapeHtml(acc.name)+'</span></div>';
+  });
+  document.getElementById('storiesRail').innerHTML = html;
+}
+
+var svStories=[], svIndex=0, svTimer=null;
+async function viewStory(accountId){
+  var stories = await idbGetAll('stories');
+  var cutoff = Date.now()-24*3600*1000;
+  svStories = stories.filter(function(s){return s.accountId===accountId && s.createdAt>=cutoff;}).sort(function(a,b){return a.createdAt-b.createdAt;});
+  if(svStories.length===0){ toast('No active stories'); return; }
+  svIndex=0;
+  await renderStoryFrame();
+  document.getElementById('storyViewer').classList.add('open');
+}
+async function renderStoryFrame(){
+  clearTimeout(svTimer);
+  var s = svStories[svIndex];
+  var acc = accountsCache.find(function(a){return a.id===s.accountId;});
+  document.getElementById('svAvatar').outerHTML = avatarHtml(acc.name,acc.id,'').replace('class="avatar"','id="svAvatar" class="avatar"');
+  document.getElementById('svName').textContent = acc.name;
+  var url = await getMediaUrl(s.mediaId);
+  var wrap = document.getElementById('svMediaWrap');
+  if(s.type==='video'){
+    wrap.innerHTML = '<video src="'+url+'" autoplay playsinline></video>';
+    var v = wrap.querySelector('video');
+    v.onended = svNext;
+  } else {
+    wrap.innerHTML = '<img src="'+url+'" alt="">';
+    svTimer = setTimeout(svNext, 5000);
+  }
+  var prog = document.getElementById('svProgress');
+  prog.innerHTML = svStories.map(function(_,i){
+    var w = i<svIndex ? '100%' : '0%';
+    return '<i><b style="width:'+w+'"></b></i>';
+  }).join('');
+  if(s.type!=='video'){
+    requestAnimationFrame(function(){
+      var bars = prog.querySelectorAll('i')[svIndex].querySelector('b');
+      bars.style.transition='width 5s linear'; bars.style.width='100%';
+    });
+  }
+}
+function svNext(){
+  if(svIndex < svStories.length-1){ svIndex++; renderStoryFrame(); }
+  else { closeStory(); }
+}
+function svPrev(){ if(svIndex>0){ svIndex--; renderStoryFrame(); } }
+function closeStory(){
+  clearTimeout(svTimer);
+  document.getElementById('storyViewer').classList.remove('open');
+  document.getElementById('svMediaWrap').innerHTML='';
+}
+
+/* ================= FEED ================= */
+async function renderFeed(){
+  var posts = await idbGetAll('posts');
+  posts.sort(function(a,b){return b.createdAt-a.createdAt;});
+  var feed = document.getElementById('feed');
+  if(posts.length===0){
+    feed.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 15l-5-4-5 4-3-2-5 4"/></svg><p>No posts yet. Share your first photo, video, or update.</p><button class="btn" style="width:auto;padding:10px 20px;" onclick="openCreate(\'post\')">Create a post</button></div>';
+    return;
+  }
+  var html = '';
+  for(var i=0;i<posts.length;i++){
+    html += await renderPostCard(posts[i]);
+  }
+  feed.innerHTML = html;
+}
+
+async function renderPostCard(post){
+  var author = accountsCache.find(function(a){return a.id===post.accountId;}) || {name:'Deleted user', id:'x'};
+  var mediaHtml='';
+  if(post.type==='image' && post.mediaId){
+    var url = await getMediaUrl(post.mediaId);
+    mediaHtml = '<div class="card-media"><img src="'+url+'" alt=""></div>';
+  } else if(post.type==='video' && post.mediaId){
+    var vurl = await getMediaUrl(post.mediaId);
+    mediaHtml = '<div class="card-media"><video src="'+vurl+'" controls playsinline preload="metadata"></video></div>';
+  }
+  var bigtext = (post.type==='text') ? '<div class="card-bigtext">'+escapeHtml(post.caption)+'</div>' : '';
+  var caption = (post.type!=='text' && post.caption) ? '<div class="card-caption"><b>'+escapeHtml(author.name)+'</b>'+escapeHtml(post.caption)+'</div>' : '';
+  var liked = post.likes.indexOf(CURRENT_ID)>-1;
+  var isMine = post.accountId===CURRENT_ID;
+  var commentsHtml = post.comments.map(function(c){
+    var ca = accountsCache.find(function(a){return a.id===c.accountId;}) || {name:'Unknown'};
+    return '<div class="comment-row">'+avatarHtml(ca.name,ca.id)+'<div><b>'+escapeHtml(ca.name)+'</b>'+escapeHtml(c.text)+'</div></div>';
+  }).join('');
+
+  return '<div class="card" data-post="'+post.id+'">'+
+    '<div class="card-head"><div class="who">'+avatarHtml(author.name,author.id)+
+      '<div><div class="name">'+escapeHtml(author.name)+'</div><div class="meta">'+escapeHtml(author.username||'')+' · '+timeAgo(post.createdAt)+'</div></div></div>'+
+      '<button class="more" onclick="postMenu(\''+post.id+'\')">⋯</button></div>'+
+    bigtext + mediaHtml + caption +
+    '<div class="card-actions">'+
+      '<div class="left">'+
+        '<button class="act'+(liked?' liked':'')+'" onclick="toggleLike(\''+post.id+'\',this)"><svg viewBox="0 0 24 24" fill="'+(liked?'currentColor':'none')+'" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.6-10-9.3C.6 8.4 2.4 5 6 5c2 0 3.4 1 6 3.6C14.6 6 16 5 18 5c3.6 0 5.4 3.4 4 6.7C19.5 16.4 12 21 12 21z"/></svg><span class="like-count">'+post.likes.length+'</span></button>'+
+        '<button class="act" onclick="toggleComments(\''+post.id+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 01-11.5 7.2L3 21l1.8-6.2A8 8 0 1121 12z"/></svg><span class="comment-count">'+post.comments.length+'</span></button>'+
+      '</div>'+
+      (isMine ? '<button class="act saved" onclick="deletePost(\''+post.id+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg></button>' : '')+
+    '</div>'+
+    '<div class="comments-block" id="comments-'+post.id+'">'+
+      commentsHtml+
+      '<div class="comment-form"><input type="text" placeholder="Add a comment…" maxlength="200" onkeydown="if(event.key===\'Enter\')submitComment(\''+post.id+'\',this)">'+
+      '<button onclick="submitComment(\''+post.id+'\',this.previousElementSibling)">Post</button></div>'+
+    '</div>'+
+  '</div>';
+}
+
+function toggleComments(postId){
+  document.getElementById('comments-'+postId).classList.toggle('show');
+}
+async function toggleLike(postId, btn){
+  var post = await idbGet('posts', postId);
+  if(!post) return;
+  var idx = post.likes.indexOf(CURRENT_ID);
+  if(idx>-1) post.likes.splice(idx,1); else post.likes.push(CURRENT_ID);
+  await idbPut('posts', post);
+  btn.classList.toggle('liked');
+  var svg = btn.querySelector('svg');
+  svg.setAttribute('fill', btn.classList.contains('liked') ? 'currentColor' : 'none');
+  btn.querySelector('.like-count').textContent = post.likes.length;
+}
+async function submitComment(postId, inputEl){
+  var text = inputEl.value.trim();
+  if(!text) return;
+  var post = await idbGet('posts', postId);
+  if(!post) return;
+  var comment = {id:uid(), accountId:CURRENT_ID, text:text.slice(0,200), createdAt:Date.now()};
+  post.comments.push(comment);
+  await idbPut('posts', post);
+  var block = document.getElementById('comments-'+postId);
+  var me = currentAccount();
+  var row = document.createElement('div');
+  row.className='comment-row';
+  row.innerHTML = avatarHtml(me.name,me.id)+'<div><b>'+escapeHtml(me.name)+'</b>'+escapeHtml(comment.text)+'</div>';
+  block.insertBefore(row, block.querySelector('.comment-form'));
+  block.classList.add('show');
+  var card = document.querySelector('.card[data-post="'+postId+'"]');
+  card.querySelector('.comment-count').textContent = post.comments.length;
+  inputEl.value='';
+}
+async function deletePost(postId){
+  if(!confirm('Delete this post?')) return;
+  var post = await idbGet('posts', postId);
+  if(post && post.mediaId){ await idbDelete('media', post.mediaId); delete mediaCache[post.mediaId]; }
+  await idbDelete('posts', postId);
+  toast('Post deleted');
+  refreshAll();
+}
+function postMenu(postId){
+  var post = null;
+  idbGet('posts', postId).then(function(p){
+    post = p;
+    if(p.accountId===CURRENT_ID){
+      if(confirm('Delete this post?')) deletePost(postId);
+    } else {
+      if(confirm('Report this post to yourself as a demo action?')) toast('Thanks — this post has been reported.');
+    }
+  });
+}
+
+/* ================= EXPLORE ================= */
+async function renderExplore(){
+  var posts = await idbGetAll('posts');
+  posts = posts.filter(function(p){return p.type==='image'||p.type==='video';});
+  var q = (document.getElementById('exploreSearch').value||'').toLowerCase().trim();
+  if(q){
+    posts = posts.filter(function(p){
+      var author = accountsCache.find(function(a){return a.id===p.accountId;});
+      var hay = ((p.caption||'')+' '+(author?author.name:'')+' '+(author?author.username:'')).toLowerCase();
+      return hay.indexOf(q)>-1;
+    });
+  }
+  posts.sort(function(a,b){return b.createdAt-a.createdAt;});
+  var grid = document.getElementById('exploreGrid');
+  if(posts.length===0){
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><p>No media posts yet.</p></div>';
+    return;
+  }
+  var html='';
+  for(var i=0;i<posts.length;i++){
+    var p = posts[i];
+    var url = await getMediaUrl(p.mediaId);
+    if(p.type==='video'){
+      html += '<div class="explore-cell vid" onclick="goScreen(\'home\');setTimeout(function(){var c=document.querySelector(\'[data-post=\\\''+p.id+'\\\']\');if(c)c.scrollIntoView();},50)"><video src="'+url+'" muted></video></div>';
+    } else {
+      html += '<div class="explore-cell" onclick="goScreen(\'home\');setTimeout(function(){var c=document.querySelector(\'[data-post=\\\''+p.id+'\\\']\');if(c)c.scrollIntoView();},50)"><img src="'+url+'" alt=""></div>';
+    }
+  }
+  grid.innerHTML = html;
+}
+
+/* ================= VIDEOS / REELS ================= */
+var reelPosts=[], reelIndex=0;
+async function renderReels(){
+  var posts = await idbGetAll('posts');
+  reelPosts = posts.filter(function(p){return p.type==='video';}).sort(function(a,b){return b.createdAt-a.createdAt;});
+  reelIndex = 0;
+  var screen = document.getElementById('reelScreen');
+  if(reelPosts.length===0){
+    screen.innerHTML = '<div class="empty-state" style="color:#fff;padding-top:120px;"><p style="color:#ccc">No videos uploaded yet. Share a video from the create button.</p><button class="btn" style="width:auto;padding:10px 20px;" onclick="openCreate(\'post\')">Upload a video</button></div>';
+    return;
+  }
+  await drawReel();
+}
+async function drawReel(){
+  var screen = document.getElementById('reelScreen');
+  var p = reelPosts[reelIndex];
+  var author = accountsCache.find(function(a){return a.id===p.accountId;}) || {name:'Unknown'};
+  var url = await getMediaUrl(p.mediaId);
+  var liked = p.likes.indexOf(CURRENT_ID)>-1;
+  screen.innerHTML =
+    '<div class="reel-counter">'+(reelIndex+1)+' / '+reelPosts.length+'</div>'+
+    '<div class="reel-slide active"><video src="'+url+'" controls playsinline autoplay muted loop></video><div class="reel-shade"></div></div>'+
+    '<div class="reel-bottom"><div class="who">'+avatarHtml(author.name,author.id)+'<b>'+escapeHtml(author.name)+'</b></div><p>'+escapeHtml(p.caption||'')+'</p></div>'+
+    '<div class="reel-rail">'+
+      '<button class="ract'+(liked?' liked':'')+'" onclick="reelLike(this)"><svg viewBox="0 0 24 24" fill="'+(liked?'currentColor':'none')+'" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.6-10-9.3C.6 8.4 2.4 5 6 5c2 0 3.4 1 6 3.6C14.6 6 16 5 18 5c3.6 0 5.4 3.4 4 6.7C19.5 16.4 12 21 12 21z"/></svg><span>'+p.likes.length+'</span></button>'+
+    '</div>'+
+    '<div class="reel-nav"><button onclick="reelPrev()" aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button><button onclick="reelNext()" aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button></div>';
+}
+async function reelLike(btn){
+  var p = reelPosts[reelIndex];
+  var idx = p.likes.indexOf(CURRENT_ID);
+  if(idx>-1) p.likes.splice(idx,1); else p.likes.push(CURRENT_ID);
+  await idbPut('posts', p);
+  btn.classList.toggle('liked');
+  btn.querySelector('svg').setAttribute('fill', btn.classList.contains('liked')?'currentColor':'none');
+  btn.querySelector('span').textContent = p.likes.length;
+}
+function reelNext(){ if(reelIndex<reelPosts.length-1){ reelIndex++; drawReel(); } }
+function reelPrev(){ if(reelIndex>0){ reelIndex--; drawReel(); } }
+
+/* ================= MESSAGES ================= */
+async function renderInbox(){
+  var others = accountsCache.filter(function(a){return a.id!==CURRENT_ID;});
+  var list = document.getElementById('inboxList');
+  if(others.length===0){
+    list.innerHTML = '<div class="empty-state"><p>Create a second guest account to start chatting locally between your profiles.</p></div>';
+    return;
+  }
+  var messages = await idbGetAll('messages');
+  var html='';
+  for(var i=0;i<others.length;i++){
+    var o = others[i];
+    var thread = messages.filter(function(m){return (m.fromId===o.id&&m.toId===CURRENT_ID)||(m.fromId===CURRENT_ID&&m.toId===o.id);})
+      .sort(function(a,b){return b.createdAt-a.createdAt;});
+    var last = thread[0];
+    html += '<div class="inbox-row" onclick="openChat(\''+o.id+'\')">'+avatarHtml(o.name,o.id)+
+      '<div class="mid"><div class="top"><b>'+escapeHtml(o.name)+'</b>'+(last?('<span class="time">'+timeAgo(last.createdAt)+'</span>'):'')+'</div>'+
+      '<p>'+(last?escapeHtml(last.text):'Say hi 👋')+'</p></div></div>';
+  }
+  list.innerHTML = html;
+}
+var chatWithId=null;
+async function openChat(otherId){
+  chatWithId = otherId;
+  var other = accountsCache.find(function(a){return a.id===otherId;});
+  document.getElementById('chatAvatar').outerHTML = avatarHtml(other.name,other.id,'').replace('class="avatar"','id="chatAvatar" class="avatar"');
+  document.getElementById('chatName').textContent = other.name;
+  await renderChatBody();
+  document.getElementById('inboxView').style.display='none';
+  document.getElementById('chatView').style.display='flex';
+}
+async function renderChatBody(){
+  var messages = await idbGetAll('messages');
+  var thread = messages.filter(function(m){return (m.fromId===chatWithId&&m.toId===CURRENT_ID)||(m.fromId===CURRENT_ID&&m.toId===chatWithId);})
+    .sort(function(a,b){return a.createdAt-b.createdAt;});
+  var body = document.getElementById('chatBody');
+  body.innerHTML = thread.map(function(m){
+    return '<div class="bubble '+(m.fromId===CURRENT_ID?'me':'them')+'">'+escapeHtml(m.text)+'</div>';
+  }).join('');
+  body.scrollTop = body.scrollHeight;
+}
+function closeChat(){
+  document.getElementById('chatView').style.display='none';
+  document.getElementById('inboxView').style.display='block';
+  chatWithId=null;
+}
+async function sendMessage(){
+  var input = document.getElementById('chatInput');
+  var text = input.value.trim();
+  if(!text || !chatWithId) return;
+  var msg = {id:uid(), fromId:CURRENT_ID, toId:chatWithId, text:text.slice(0,500), createdAt:Date.now()};
+  await idbPut('messages', msg);
+  input.value='';
+  await renderChatBody();
+}
+
+/* ================= PROFILE ================= */
+var profileTab='posts';
+async function renderProfile(){
+  var a = currentAccount();
+  if(!a) return;
+  document.getElementById('profileAvatar').outerHTML = avatarHtml(a.name,a.id,'').replace('class="avatar"','id="profileAvatar" class="avatar"');
+  document.getElementById('profileName').textContent = a.name;
+  document.getElementById('profileUname').textContent = a.username;
+  var posts = await idbGetAll('posts');
+  var mine = posts.filter(function(p){return p.accountId===a.id;});
+  var stories = await idbGetAll('stories');
+  var cutoff = Date.now()-24*3600*1000;
+  var myStories = stories.filter(function(s){return s.accountId===a.id && s.createdAt>=cutoff;});
+  document.getElementById('statPosts').textContent = mine.filter(function(p){return p.type!=='video';}).length;
+  document.getElementById('statVideos').textContent = mine.filter(function(p){return p.type==='video';}).length;
+  document.getElementById('statStories').textContent = myStories.length;
+  await renderProfileGrid();
+}
+function setPTab(btn, tab){
+  document.querySelectorAll('.ptab').forEach(function(t){t.classList.remove('active');});
+  btn.classList.add('active');
+  profileTab = tab;
+  renderProfileGrid();
+}
+async function renderProfileGrid(){
+  var a = currentAccount();
+  var posts = await idbGetAll('posts');
+  var mine = posts.filter(function(p){return p.accountId===a.id;}).sort(function(x,y){return y.createdAt-x.createdAt;});
+  var items = profileTab==='videos' ? mine.filter(function(p){return p.type==='video';}) : mine.filter(function(p){return p.type!=='video';});
+  var grid = document.getElementById('profileGrid');
+  if(items.length===0){
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;padding:30px 10px;"><p>Nothing here yet.</p></div>';
+    return;
+  }
+  var html='';
+  for(var i=0;i<items.length;i++){
+    var p = items[i];
+    if(p.type==='text'){
+      html += '<div class="explore-cell"><div class="txtcell">'+escapeHtml((p.caption||'').slice(0,60))+'</div></div>';
+    } else {
+      var url = await getMediaUrl(p.mediaId);
+      html += '<div class="explore-cell'+(p.type==='video'?' vid':'')+'">'+(p.type==='video' ? '<video src="'+url+'" muted></video>' : '<img src="'+url+'" alt="">')+'</div>';
+    }
+  }
+  grid.innerHTML = html;
+}
+
+/* ================= CREATE SHEET ================= */
+function openCreate(tab){
+  setCreateTab(tab||'post');
+  pendingUpload=null;
+  document.getElementById('uploadPreviewWrap').innerHTML='';
+  document.getElementById('uploadDrop').style.display='block';
+  document.getElementById('captionInput').value='';
+  document.getElementById('createPostErr').classList.remove('show');
+  document.getElementById('createBackdrop').classList.add('open');
+  document.getElementById('createSheet').classList.add('open');
+}
+function closeCreate(){
+  document.getElementById('createBackdrop').classList.remove('open');
+  document.getElementById('createSheet').classList.remove('open');
+}
+function setCreateTab(tab){
+  createTab = tab;
+  document.getElementById('tabPost').classList.toggle('active', tab==='post');
+  document.getElementById('tabStory').classList.toggle('active', tab==='story');
+  document.getElementById('captionWrap').style.display = tab==='story' ? 'none' : 'block';
+  document.getElementById('uploadDrop').querySelector('p').innerHTML = tab==='story'
+    ? 'Tap to add a photo or video for your story<br><span style="font-size:11px">Disappears after 24 hours</span>'
+    : 'Tap to add a photo or video<br><span style="font-size:11px">Images up to 6MB · Videos up to 25MB</span>';
+}
+function handleFileSelect(e){
+  var file = e.target.files[0];
+  if(!file) return;
+  var isImage = file.type.startsWith('image/');
+  var isVideo = file.type.startsWith('video/');
+  if(!isImage && !isVideo){ toast('Please choose an image or video file'); return; }
+  var maxSize = isImage ? 6*1024*1024 : 25*1024*1024;
+  if(file.size > maxSize){ toast((isImage?'Image':'Video')+' is too large ('+(isImage?'6MB':'25MB')+' max)'); e.target.value=''; return; }
+  pendingUpload = {file:file, type:isImage?'image':'video'};
+  var url = URL.createObjectURL(file);
+  document.getElementById('uploadPreviewWrap').innerHTML =
+    '<div class="upload-preview">'+(isImage?('<img src="'+url+'">'):('<video src="'+url+'" controls></video>'))+
+    '<button class="rm" onclick="clearUpload()">✕</button></div>';
+  document.getElementById('uploadDrop').style.display='none';
+}
+function clearUpload(){
+  pendingUpload=null;
+  document.getElementById('uploadPreviewWrap').innerHTML='';
+  document.getElementById('uploadDrop').style.display='block';
+  document.getElementById('fileInput').value='';
+}
+async function submitCreate(){
+  var err = document.getElementById('createPostErr');
+  err.classList.remove('show');
+  var caption = document.getElementById('captionInput').value.trim();
+
+  if(createTab==='story'){
+    if(!pendingUpload){ err.textContent='Add a photo or video for your story.'; err.classList.add('show'); return; }
+    var mediaId = uid();
+    await idbPut('media', {id:mediaId, blob:pendingUpload.file, mime:pendingUpload.file.type});
+    await idbPut('stories', {id:uid(), accountId:CURRENT_ID, type:pendingUpload.type, mediaId:mediaId, createdAt:Date.now()});
+    toast('Story shared');
+    closeCreate();
+    renderStoriesRail();
+    return;
+  }
+
+  if(!pendingUpload && !caption){ err.textContent='Add a photo/video, or write a text update.'; err.classList.add('show'); return; }
+
+  var post = {id:uid(), accountId:CURRENT_ID, type:'text', caption:caption, mediaId:null, likes:[], comments:[], createdAt:Date.now()};
+  if(pendingUpload){
+    var mId = uid();
+    await idbPut('media', {id:mId, blob:pendingUpload.file, mime:pendingUpload.file.type});
+    post.type = pendingUpload.type;
+    post.mediaId = mId;
+  }
+  await idbPut('posts', post);
+  toast('Post shared');
+  closeCreate();
+  refreshAll();
+  goScreen('home');
+}
+
+/* ================= SETTINGS ================= */
+function openSettings(){
+  var a = currentAccount();
+  document.getElementById('editName').value = a.name;
+  document.getElementById('editPin').value = a.pin || '';
+  document.getElementById('darkSwitch').classList.toggle('on', document.body.getAttribute('data-theme')==='dark');
+  document.getElementById('settingsAcctCount').textContent = accountsCache.length+'/3 profiles on this device';
+  document.getElementById('settingsBackdrop').classList.add('open');
+  document.getElementById('settingsSheet').classList.add('open');
+}
+function closeSettings(){
+  document.getElementById('settingsBackdrop').classList.remove('open');
+  document.getElementById('settingsSheet').classList.remove('open');
+}
+function toggleDark(){
+  var dark = document.body.getAttribute('data-theme')==='dark';
+  document.body.setAttribute('data-theme', dark ? 'light':'dark');
+  localStorage.setItem('sw_theme', dark ? 'light':'dark');
+  document.getElementById('darkSwitch').classList.toggle('on', !dark);
+}
+async function saveName(){
+  var name = document.getElementById('editName').value.trim();
+  if(!name){ toast('Name cannot be empty'); return; }
+  var a = currentAccount();
+  a.name = name.slice(0,24);
+  await idbPut('accounts', a);
+  toast('Name updated');
+  refreshAll();
+}
+async function savePin(){
+  var pin = document.getElementById('editPin').value.trim();
+  if(pin && !/^\d{4}$/.test(pin)){ toast('PIN must be 4 digits'); return; }
+  var a = currentAccount();
+  a.pin = pin || null;
+  await idbPut('accounts', a);
+  toast(pin ? 'PIN set' : 'PIN removed');
+}
+async function deleteAccount(){
+  var a = currentAccount();
+  if(!confirm('Delete "'+a.name+'"? This removes all its posts, stories and messages from this device. This cannot be undone.')) return;
+  var posts = await idbGetAll('posts');
+  for(var i=0;i<posts.length;i++){ if(posts[i].accountId===a.id){ if(posts[i].mediaId) await idbDelete('media', posts[i].mediaId); await idbDelete('posts', posts[i].id); } }
+  var stories = await idbGetAll('stories');
+  for(var j=0;j<stories.length;j++){ if(stories[j].accountId===a.id){ if(stories[j].mediaId) await idbDelete('media', stories[j].mediaId); await idbDelete('stories', stories[j].id); } }
+  var messages = await idbGetAll('messages');
+  for(var k=0;k<messages.length;k++){ if(messages[k].fromId===a.id || messages[k].toId===a.id){ await idbDelete('messages', messages[k].id); } }
+  await idbDelete('accounts', a.id);
+  accountsCache = accountsCache.filter(function(x){return x.id!==a.id;});
+  localStorage.removeItem('sw_current');
+  closeSettings();
+  toast('Account deleted');
+  document.getElementById('appShell').classList.remove('show');
+  document.getElementById('gateScreen').style.display='flex';
+  renderGate();
+}
+</script>
+</body>
+</html>
